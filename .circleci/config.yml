@@ -18,13 +18,13 @@ jobs:
           command: npm install
       - run: 
           name: building docker image
-          command: docker build --rm=false -t asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1 .
+          command: docker build --rm=false -t eu.gcr.io/fagdag-devops/appname:v1.0 .
       - run:
           name: Mkdir docker-cache
           command: mkdir -p docker-cache
       - run:
           name: Save docker image to cache directory
-          command: docker save -o docker-cache/built-image.tar asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1
+          command: docker save -o docker-cache/built-image.tar eu.gcr.io/fagdag-devops/appname:v1.0
       - persist_to_workspace:
           root: .
           paths:
@@ -78,7 +78,7 @@ jobs:
             gcloud --quiet container clusters get-credentials fagdag1
       - run: 
           name: tag docker image with latest
-          command: docker tag eu.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1 asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:latest
+          command: docker tag eu.gcr.io/fagdag-devops/appname:v1.0 eu.gcr.io/fagdag-devops/appname:latest
       - run:
           name: Running staging.sh
           command: bash ./deploy/staging.sh
