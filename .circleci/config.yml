@@ -69,6 +69,7 @@ jobs:
 #      - add_ssh_keys:
 #          fingerprints:
 #          - $SSH_FINGERPRINT
+      - setup_remote_docker
       - checkout
       - run: *create-image
       - run: *GCP-auth
