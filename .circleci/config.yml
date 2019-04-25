@@ -1,36 +1,97 @@
-version: 2.0
+version: 2
 jobs:
   build:
+    working_directory: ~/your-project-name
     docker:
-      - image: circleci/ruby:2.4.2-jessie-node
-    working_directory: ~/circleci-demo-workflows
+      - image: circleci/node:9.11
     steps:
       - checkout
+      - setup_remote_docker
       - run:
-          name: "Update Node.js and npm"
-          command: |
-            curl -sSL "https://nodejs.org/dist/v11.10.0/node-v11.10.0-linux-x64.tar.xz" | sudo tar --strip-components=2 -xJ -C /usr/local/bin/ node-v11.10.0-linux-x64/bin/node
-            curl https://www.npmjs.com/install.sh | sudo bash
-      - save_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          name: making sure we're in the root directory
+          command: ls -a
+      - run:
+          name: Does docker even exist
+          command: docker -v
+      - run:
+          name: npm install
+          command: npm install
+      - run: 
+          name: building docker image
+          command: docker build --rm=false -t asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1 .
+      - run:
+          name: Mkdir docker-cache
+          command: mkdir -p docker-cache
+      - run:
+          name: Save docker image to cache directory
+          command: docker save -o docker-cache/built-image.tar asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1
+      - persist_to_workspace:
+          root: .
           paths:
-            - ~/circleci-demo-workflows
+            - docker-cache
+      - save_cache:
+          key: node-modules-{{ checksum "package.json" }}
+          paths:
+            - node_modules
   test:
+    working_directory: ~/your-project-name
     docker:
-      - image: circleci/ruby:2.4.2-jessie-node
-    working_directory: ~/circleci-demo-workflows
+      - image: circleci/node:9.11
+      - image: circleci/redis
+      - image: mysql:5.7
+        environment:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_USER: root
+          MYSQL_DATABASE: your-database-name
     steps:
-     - restore_cache:
-         keys:
-           - v1-repo-{{ .Environment.CIRCLE_SHA1 }}
-     - run:
-         name: Check current version of node
-         command: node -v
+      - checkout
+      - restore_cache:
+          keys:
+            - node-modules-{{ checksum "package.json" }}
+      - run:
+          name: installing mysql client from apt
+          command: sudo apt install -y mysql-client
+      - run:
+          name: migrate and seed
+          command: npm run db:migrate && npm run db:seed:run
+      - run:
+          name: npm test
+          command: npm test
+
+  deploy-staging:
+    working_directory: ~/your-project-name
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - setup_remote_docker
+      - attach_workspace:
+          at: .
+      - run:
+          name: Load docker image from cache
+          command: docker load --input docker-cache/built-image.tar
+      - run:
+          name: Auth gCloud SDK
+          command: bash ./deploy/gcloud-auth.sh
+      - run: 
+          name: tag docker image with latest
+          command: docker tag asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1 asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:latest
+      - run:
+          name: Running staging.sh
+          command: bash ./deploy/staging.sh
 workflows:
   version: 2
-  build_and_test:
+  build_test_deploy:
     jobs:
-      - build
+      - build:
+          context: your-context-name
       - test:
           requires:
             - build
+      - deploy-staging:
+          context: your-context-name
+          requires:
+            - test
+          filters:
+            branches:
+              only: feature/circleci-v2
