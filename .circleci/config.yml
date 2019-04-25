@@ -66,10 +66,12 @@ jobs:
   build:
     executor: java
     steps:
-      - add_ssh_keys:
-          fingerprints:
-          - $SSH_FINGERPRINT
+#      - add_ssh_keys:
+#          fingerprints:
+#          - $SSH_FINGERPRINT
       - checkout
+      - run: *create-image
+      - run: *GCP-auth
   masterjob:
     executor: java
 
