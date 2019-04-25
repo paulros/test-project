@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name:  circleci-demo
+  labels:
+    name:  circleci-demo
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name:  circleci-demo
+    spec:
+      containers:
+      - image: eu.gcr.io/fagdag-devops/circleci-demo:af8a59054eaad1ad63dc4d922269bd7a40660c9b
+        name:  circleci-demo
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+        env:
+        - name:  ENVVARNAME
+          value:  ENVVARVALUE       
+        ports:
+        - containerPort:  5000
+          name:  my-name
+        volumeMounts:
+        - mountPath: /data
+          name: data
+      volumes:
+        - name: data
+          emptyDir: {}
+      restartPolicy: Always

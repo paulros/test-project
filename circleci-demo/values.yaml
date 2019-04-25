@@ -1,0 +1,14 @@
+image: eu.gcr.io/entur-rtd/circleci-demo
+imageTag: 'master-v180'
+environment: rtd
+slack: circleci
+team: platform
+type: backend
+service:
+  internalPort: 80
+domain: entur.io
+replicas: 3
+cpuLimit: 700m
+cpuRequest: 100m
+memLimit: 1280Mi
+memRequest: 512Mi

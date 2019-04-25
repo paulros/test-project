@@ -1,97 +1,85 @@
-version: 2
+aliases:
+  - &GCP-auth
+    name: GCP Authentication
+    command: |
+      echo $GCLOUD_SERVICE_KEY > ${HOME}/account-auth.json
+      gcloud auth activate-service-account --key-file ${HOME}/account-auth.json
+      gcloud --quiet container clusters get-credentials $CLOUDSDK_CONTAINER_CLUSTER
+
+  - &create-image
+    name: Create Docker image
+    command: |
+      echo "creating image $CIRCLE_BRANCH-v$VERSION"
+      docker build -t eu.gcr.io/fagdag-devops/$CIRCLE_PROJECT_REPONAME:$CIRCLE_BRANCH-v$VERSION .
+
+  - &upload-image
+    name: Upload image to GCR
+    command: |
+      docker login -u _json_key --password-stdin https://eu.gcr.io < ${HOME}/account-auth.json
+      docker push eu.gcr.io/fagdag-devops/$CIRCLE_PROJECT_REPONAME:$CIRCLE_BRANCH-v$VERSION
+
+#  - &install-helm
+#    name: Install Helm
+#    command: |
+#      HELM_VER="helm-v2.10.0-linux-amd64"
+#      curl -L -o /tmp/$HELM_VER.tar.gz https://storage.googleapis.com/kubernetes-helm/$HELM_VER.tar.gz
+#      tar -zxv -C /tmp -f /tmp/$HELM_VER.tar.gz
+#      mv /tmp/linux-amd64/helm /usr/local/bin/helm
+#      helm init --client-only
+#      helm plugin install https://github.com/viglesiasce/helm-gcs.git --version v0.2.0
+#      helm repo add entur-rtd-repo gs://entur-helm-charts
+
+#  - &update-and-package-helm-chart
+#    name: Update helm chart with new version
+#    command: |
+#      sed -i "s/version:.*$/version: '$VERSION'/g"  ./circleci-demo/Chart.yaml
+#      sed -i "s/appVersion:.*$/appVersion: '$CIRCLE_BRANCH-v$VERSION'/g"  ./circleci-demo/Chart.yaml
+#      sed -i "s/name:.*$/name: 'circleci-demo-$CIRCLE_BRANCH'/g"  ./circleci-demo/Chart.yaml
+#      sed -i "s/imageTag:.*$/imageTag: '$CIRCLE_BRANCH-v$VERSION'/g"  ./circleci-demo/values.yaml
+#      mv circleci-demo circleci-demo-$CIRCLE_BRANCH
+#      cat ./circleci-demo-$CIRCLE_BRANCH/Chart.yaml
+#      helm package ./circleci-demo-$CIRCLE_BRANCH
+#      helm gcs push circleci-demo-$CIRCLE_BRANCH-$VERSION.tgz gs://entur-helm-charts
+#
+#  - &push-helm-chart-master
+#      helm gcs push products-chart-$VERSION.tgz gs://entur-helm-charts
+#
+#  - &push-helm-chart-feature
+#      helm gcs push products-chart-$CIRCLE_BRANCH-$VERSION.tgz gs://entur-helm-charts
+#
+#  - &google-sdk-container-config
+#    docker:
+#    - image: google/cloud-sdk:latest
+#      environment:
+#        TERM: dumb
+
+executors:
+  java:
+    docker:
+    - image: circleci/openjdk:8
+      environment:
+        TERM: dumb
+
+
+version: 2.1
 jobs:
   build:
-    working_directory: ~/fagdag
-    docker:
-      - image: circleci/node:9.11
+    executor: java
     steps:
+      - add_ssh_keys:
+          fingerprints:
+          - $SSH_FINGERPRINT
       - checkout
-      - setup_remote_docker
-      - run:
-          name: making sure we're in the root directory
-          command: ls -a
-      - run:
-          name: Does docker even exist
-          command: docker -v
-      - run:
-          name: npm install
-          command: npm install
-      - run: 
-          name: building docker image
-          command: docker build --rm=false -t eu.gcr.io/fagdag-devops/appname:v1.0 .
-      - run:
-          name: Mkdir docker-cache
-          command: mkdir -p docker-cache
-      - run:
-          name: Save docker image to cache directory
-          command: docker save -o docker-cache/built-image.tar eu.gcr.io/fagdag-devops/appname:v1.0
-      - persist_to_workspace:
-          root: .
-          paths:
-            - docker-cache
-#      - save_cache:
-#          key: node-modules-{{ checksum "package.json" }}
-#          paths:
-#            - node_modules
-  test:
-    working_directory: ~/fagdag
-    docker:
-      - image: circleci/node:9.11
-      - image: circleci/redis
-      - image: mysql:5.7
-        environment:
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
-          MYSQL_USER: root
-          MYSQL_DATABASE: db
-    steps:
-      - checkout
-#      - restore_cache:
-#          keys:
-#            - node-modules-{{ checksum "package.json" }}
-      - run:
-          name: installing mysql client from apt
-          command: sudo apt install -y mysql-client
-      - run:
-          name: migrate and seed
-          command: npm run db:migrate && npm run db:seed:run
-      - run:
-          name: npm test
-          command: npm test
+  masterjob:
+    executor: java
 
-  deploy-staging:
-    working_directory: ~/fagdag
-    docker:
-      - image: google/cloud-sdk
     steps:
-      - checkout
-      - setup_remote_docker
-      - attach_workspace:
-          at: .
-      - run:
-          name: Load docker image from cache
-          command: docker load --input docker-cache/built-image.tar
-      - run:
-          name: Auth gCloud SDK
-          command: |
-            echo $GCLOUD_SERVICE_KEY > ${HOME}/account-auth.json
-            gcloud auth activate-service-account --key-file ${HOME}/account-auth.json
-            gcloud --quiet container clusters get-credentials fagdag1
-      - run: 
-          name: tag docker image with latest
-          command: docker tag eu.gcr.io/fagdag-devops/appname:v1.0 eu.gcr.io/fagdag-devops/appname:latest
-      - run:
-          name: Running staging.sh
-          command: bash ./deploy/staging.sh
+      - run: echo deploy
+
+
 workflows:
-  version: 2
-  build_test_deploy:
+  main:
     jobs:
       - build:
           context: global
-      - test:
-          requires:
-            - build
-#      - deploy-staging:
-#          context: global
-#          requires:
-#            - test
+      - masterjob

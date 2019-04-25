@@ -1,23 +1,15 @@
-FROM node:11.6.0-alpine as base
 
-USER node
-WORKDIR /home/node
+# A basic apache server. To use either add or bind mount content under /var/www
+FROM ubuntu:12.04
 
-COPY sonat-chat/package.json sonat-chat/yarn.lock ./
-RUN yarn
+MAINTAINER Kimbro Staken version: 0.1
 
-COPY sonat-chat/public public
-COPY sonat-chat/src src
-RUN yarn build
+RUN apt-get update && apt-get install -y apache2 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-FROM nginx:1.15.2-alpine as release
-RUN apk add --no-cache jq
+ENV APACHE_RUN_USER www-data
+ENV APACHE_RUN_GROUP www-data
+ENV APACHE_LOG_DIR /var/log/apache2
 
-COPY --from=base /home/node/build /var/www
-COPY nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 
-COPY docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/usr/sbin/apache2", "-D", "FOREGROUND"]

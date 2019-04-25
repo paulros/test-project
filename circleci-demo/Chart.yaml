@@ -1,0 +1,12 @@
+apiVersion: v1
+name: circleci-demo
+version: '180'
+appVersion: 'master-v180'
+description: circleci demo application apache2 
+keywords:
+- circleci-demo
+sources:
+- https://bitbucket.org/enturas/circleci-demo
+maintainers:
+- name: Team plattform
+  email: espen.blikra@entur.org

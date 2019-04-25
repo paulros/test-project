@@ -1,0 +1,42 @@
+apiVersion: apps/v1beta1 # for versions before 1.6.0 use extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    app: {{ .Chart.Name }}
+    imageTag: {{ .Values.imageTag }}
+    team: {{ .Values.team}}
+    slack: {{ .Values.slack }}
+    type: {{ .Values.type }}
+    environment: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-circleci-demo
+    spec:
+      containers:
+      - name: circleci-demo
+        image: {{ .Values.image }}:{{ .Values.imageTag }}
+        ports:
+        - name: apache2-port
+          containerPort: {{ .Values.service.internalPort }}
+        env:
+        - name: ENVVARNAME
+          value: ENVVALUE
+        resources:
+          limits:
+            cpu: {{ .Values.cpuLimit }}
+            memory: {{ .Values.memLimit }}
+          requests:
+            cpu: {{ .Values.cpuRequest }}
+            memory: {{ .Values.memRequest }}
