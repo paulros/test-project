@@ -72,8 +72,10 @@ jobs:
       - setup_remote_docker
       - checkout
       - run: *create-image
-      - run: docker login -u "${GCLOUD_LOGIN}" -p https://eu.gcr.io
-#      - run: docker login -u ${GCLOUD_LOGIN} --password-stdin https://eu.gcr.io < ${HOME}/account-auth.json
+      - run: |
+          name: gcp-login
+            echo $GCLOUD_SERVICE_KEY > ${HOME}/account-auth.json
+            docker login -u ${GCLOUD_LOGIN} --password-stdin https://eu.gcr.io < ${HOME}/account-auth.json
   masterjob:
     executor: java
 
