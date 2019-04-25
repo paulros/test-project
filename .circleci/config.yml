@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: ~/your-project-name
+    working_directory: ~/fagdag
     docker:
       - image: circleci/node:9.11
     steps:
@@ -34,7 +34,7 @@ jobs:
           paths:
             - node_modules
   test:
-    working_directory: ~/your-project-name
+    working_directory: ~/fagdag
     docker:
       - image: circleci/node:9.11
       - image: circleci/redis
@@ -42,7 +42,7 @@ jobs:
         environment:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
           MYSQL_USER: root
-          MYSQL_DATABASE: your-database-name
+          MYSQL_DATABASE: db
     steps:
       - checkout
       - restore_cache:
@@ -59,7 +59,7 @@ jobs:
           command: npm test
 
   deploy-staging:
-    working_directory: ~/your-project-name
+    working_directory: ~/fagdag
     docker:
       - image: google/cloud-sdk
     steps:
@@ -72,10 +72,13 @@ jobs:
           command: docker load --input docker-cache/built-image.tar
       - run:
           name: Auth gCloud SDK
-          command: bash ./deploy/gcloud-auth.sh
+          command: |
+            echo $GCLOUD_SERVICE_KEY > ${HOME}/account-auth.json
+            gcloud auth activate-service-account --key-file ${HOME}/account-auth.json
+            gcloud --quiet container clusters get-credentials fagdag1
       - run: 
           name: tag docker image with latest
-          command: docker tag asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1 asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:latest
+          command: docker tag eu.gcr.io/${PROJECT}/${DOCKER_IMAGE}:$CIRCLE_SHA1 asia.gcr.io/${PROJECT}/${DOCKER_IMAGE}:latest
       - run:
           name: Running staging.sh
           command: bash ./deploy/staging.sh
@@ -84,14 +87,11 @@ workflows:
   build_test_deploy:
     jobs:
       - build:
-          context: your-context-name
+          context: global
       - test:
           requires:
             - build
-      - deploy-staging:
-          context: your-context-name
-          requires:
-            - test
-          filters:
-            branches:
-              only: feature/circleci-v2
+#      - deploy-staging:
+#          context: global
+#          requires:
+#            - test
