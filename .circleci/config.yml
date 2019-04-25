@@ -74,8 +74,8 @@ jobs:
       - run: *create-image
       - run: |
           name: gcp-login
-#            echo $GCLOUD_SERVICE_KEY > ${HOME}/account-auth.json
-            docker login -u ${GCLOUD_LOGIN} -p "${GCLOUD_SERVICE_KEY}" https://eu.gcr.io 
+            docker login -u ${GCLOUD_LOGIN} -p "${GCLOUD_SERVICE_KEY}" https://eu.gcr.io            
+#            echo $GCLOUD_SERVICE_KEY > ${HOME}/account-auth.json 
 #            docker login -u "${DOCKER_LOGIN}" -p "${GCLOUD_SERVICE_KEY}" $DOCKER_REGISTRY
 #            docker push eu.gcr.io/fagdag-devops/$CIRCLE_PROJECT_REPONAME:$CIRCLE_BRANCH-v$VERSION
   masterjob:
