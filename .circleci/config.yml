@@ -29,10 +29,10 @@ jobs:
           root: .
           paths:
             - docker-cache
-      - save_cache:
-          key: node-modules-{{ checksum "package.json" }}
-          paths:
-            - node_modules
+#      - save_cache:
+#          key: node-modules-{{ checksum "package.json" }}
+#          paths:
+#            - node_modules
   test:
     working_directory: ~/fagdag
     docker:
@@ -45,9 +45,9 @@ jobs:
           MYSQL_DATABASE: db
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - node-modules-{{ checksum "package.json" }}
+#      - restore_cache:
+#          keys:
+#            - node-modules-{{ checksum "package.json" }}
       - run:
           name: installing mysql client from apt
           command: sudo apt install -y mysql-client
